@@ -1,36 +1,5 @@
 import pandas as pd
 
-def get_user_top_tracks(sp):
-    '''
-    Returns list of IDs of the user's top songs
-
-    params: spotify auth
-    '''
-    ids = []
-
-    # User Top Tracks
-    results = sp.current_user_top_tracks(limit=50, offset=0, time_range='medium_term')
-    tracks = results['items']
-
-    i = 0
-    for i in range(len(tracks)):
-        ids.append(tracks[i]['id'])
-
-
-    # User Top Artists
-    results = sp.current_user_top_artists(limit=20, offset=0, time_range='medium_term')
-    artists = []
-    for result in results['items']:
-        artists.append(result['id'])
-    
-    i = 0
-    for i in range(len(artists)):
-        tracks = sp.artist_top_tracks(artists[i], country='US')
-        for track in tracks['tracks']:
-            ids.append(track['id'])
-
-    return ids
-
 def get_user_saved_tracks(sp, n):
     '''
     Gets n*50 of the users most recently saved tracks
@@ -54,6 +23,20 @@ def get_user_saved_tracks(sp, n):
         ids.append(tracks[i]['track']['id'])
 
     return ids
+
+def get_playlist_ids(sp):
+    '''
+    Returns list of each playlist id
+
+    params
+        - sp: spotify auth
+    '''
+    playlists = []
+    for p in sp.current_user_playlists()['items']:
+        playlists.append(p['id'])
+    
+    return playlists
+
 
 def get_playlist_tracks(playlist, sp):
     '''
@@ -86,7 +69,7 @@ def get_recommended(playlist, sp):
         - playlist: playlist ID
         - sp: spotify auth
     '''
-    playlist_ids = get_playlist_tracks([], playlist, sp)
+    playlist_ids = get_playlist_tracks(playlist, sp)
 
     ids = []
 
@@ -104,23 +87,46 @@ def get_recommended(playlist, sp):
     return ids
 
 
-def get_features(features, like, dislike, sp):
+def get_features(tracks, sp):
+    '''
+    Returns dataframe with each song in the list of tracks and their features
+
+    params:
+        - playlist: playlist ID
+        - sp: spotify auth
+    '''
 
     i = 0
-    for i in range(len(like)):
-        audios = sp.audio_features(like[i])
+    features = []
+    for track in tracks:
+        features.append(sp.audio_features(track))
+    
+    df = pd.DataFrame(features)[0].apply(pd.Series)
+    df.insert(loc=0, column="name", value=tracks)
+        
+    return df
 
-        for audio in audios:
-            features.append(audio)
-            features[-1]['target'] = 1
+def get_playlist_data(playlists, sp):
+    '''
+    Returns a df containing data for each playlist
 
-    i = 0
-    for i in range(len(dislike)):
-        audios = sp.audio_features(dislike[i])
+    params:
+        - playlist: playlist ID
+        - sp: spotify auth
+    '''
+    df = pd.DataFrame()
 
-        for audio in audios:
-            features.append(audio)
-            features[-1]['target'] = 0
+    for playlist in playlists:
 
-    return pd.DataFrame(features)
+        # Build dataframe for songs currently in playlist
+        tracks_in_playlist = get_playlist_tracks(playlist, sp)
+        df_playlist = get_features(tracks_in_playlist, sp)
 
+        # Build dataframe for recommende songs
+        #tracks_rec = get_recommended(playlist, sp)
+        # df_rec = get_features(tracks_rec, sp)
+        # df = pd.concat([df_in_playlist, df_rec])
+        df_playlist["Playlist"] = playlist
+        df = pd.concat([df, df_playlist])
+    
+    return df
