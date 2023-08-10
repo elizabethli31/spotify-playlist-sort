@@ -116,17 +116,18 @@ def get_playlist_data(playlists, sp):
     '''
     df = pd.DataFrame()
 
-    for playlist in playlists:
-
+    for playlist in playlists['items']:
+        
         # Build dataframe for songs currently in playlist
-        tracks_in_playlist = get_playlist_tracks(playlist, sp)
+        tracks_in_playlist = get_playlist_tracks(playlist['id'], sp)
         df_playlist = get_features(tracks_in_playlist, sp)
 
         # Build dataframe for recommende songs
         #tracks_rec = get_recommended(playlist, sp)
         # df_rec = get_features(tracks_rec, sp)
         # df = pd.concat([df_in_playlist, df_rec])
-        df_playlist["Playlist"] = playlist
+        df_playlist['Playlist'] = playlist['id']
         df = pd.concat([df, df_playlist])
     
     return df
+

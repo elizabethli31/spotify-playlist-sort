@@ -2,6 +2,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import spotipy.util as util
 from songs import *
+from model import *
 
 
 if __name__ == '__main__':
@@ -17,13 +18,15 @@ if __name__ == '__main__':
     else:
         print("Can't get token for", username)
 
+    
+    playlists = []
+    playlists = sp.current_user_playlists()
 
-    like_ids = []
-    like_ids = sp.current_user_playlists()
+    df = get_playlist_data(playlists, sp)
 
-    tracks = get_playlist_tracks("6XOle12412Xb9nI80M86XB", sp)
+    train(df, sp)
 
 
-    print(get_playlist_data(get_playlist_ids(sp), sp))
+
 
 
