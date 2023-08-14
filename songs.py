@@ -47,19 +47,24 @@ def get_playlist_tracks(playlist, sp):
         - sp: spotify auth
     '''
     ids = []
+    names = []
 
     tracks = sp.playlist_tracks(playlist, limit=100, offset=0)
 
     while tracks:
         for song in tracks['items']:
-            ids.append(song['track']['id'])
+            if song['track']:
+                ids.append(song['track']['id'])
+                names.append(song['track']['name'])
+
+            else:
+                continue
     
         if tracks['next']:
             tracks = sp.next(tracks)
         else:
             break
-    
-    return ids
+    return ids, names
 
 def get_recommended(playlist, sp):
     '''
@@ -87,7 +92,7 @@ def get_recommended(playlist, sp):
     return ids
 
 
-def get_features(tracks, sp):
+def get_features(tracks, sp, names):
     '''
     Returns dataframe with each song in the list of tracks and their features
 
@@ -98,11 +103,13 @@ def get_features(tracks, sp):
 
     i = 0
     features = []
-    for track in tracks:
+    tracks_clean = list(filter(lambda item: item is not None, tracks))
+    # names_clean = list(filter(lambda item: item is not None, names))
+    for idx, track in enumerate(tracks_clean):
         features.append(sp.audio_features(track))
     
     df = pd.DataFrame(features)[0].apply(pd.Series)
-    df.insert(loc=0, column="name", value=tracks)
+    df.insert(loc=0, column="name", value=tracks_clean)
         
     return df
 
@@ -119,14 +126,13 @@ def get_playlist_data(playlists, sp):
     for playlist in playlists['items']:
         
         # Build dataframe for songs currently in playlist
-        tracks_in_playlist = get_playlist_tracks(playlist['id'], sp)
-        df_playlist = get_features(tracks_in_playlist, sp)
-
+        tracks_in_playlist, names = get_playlist_tracks(playlist['id'], sp)
+        df_playlist = get_features(tracks_in_playlist, sp, names)
         # Build dataframe for recommende songs
         #tracks_rec = get_recommended(playlist, sp)
         # df_rec = get_features(tracks_rec, sp)
         # df = pd.concat([df_in_playlist, df_rec])
-        df_playlist['Playlist'] = playlist['id']
+        df_playlist['Playlist'] = playlist['name']
         df = pd.concat([df, df_playlist])
     
     return df
